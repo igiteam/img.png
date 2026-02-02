@@ -2,6 +2,7 @@
 <html>
 
 <head>
+    <meta charset="UTF-8">
     <script>
         // Get parameters from URL
         const urlParams = new URLSearchParams(window.location.search);
@@ -9,34 +10,13 @@
         const size = parseInt(urlParams.get('size') || '64');
 
         if (!videoId || !/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
-            // Return error image
-            const canvas = document.createElement('canvas');
-            canvas.width = 64;
-            canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#ff4444';
-            ctx.fillRect(0, 0, 64, 64);
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 16px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('ERR', 32, 32);
-
-            // Set as favicon immediately
-            let link = document.querySelector("link[rel='icon']");
-            if (!link) {
-                link = document.createElement('link');
-                link.rel = 'icon';
-                document.head.appendChild(link);
-            }
-            link.href = canvas.toDataURL('image/png');
-            link.type = 'image/png';
+            // Return error image as actual PNG
+            drawAndServeImage('ERR', '#ff4444');
         } else {
-            // Generate the cropped thumbnail
-            generateCroppedThumbnail(videoId, size);
+            generateAndServeThumbnail(videoId, size);
         }
 
-        function generateCroppedThumbnail(videoId, size) {
+        function generateAndServeThumbnail(videoId, size) {
             const canvas = document.createElement('canvas');
             canvas.width = size;
             canvas.height = size;
@@ -47,8 +27,7 @@
 
             function tryNextQuality() {
                 if (currentQuality >= qualities.length) {
-                    // All failed, use fallback
-                    drawFallback();
+                    drawAndServeImage('YT', generateColor(videoId));
                     return;
                 }
 
@@ -65,8 +44,8 @@
                     // Draw cropped and resized
                     ctx.drawImage(img, sx, sy, sourceSize, sourceSize, 0, 0, size, size);
 
-                    // Set as favicon
-                    setFavicon(canvas.toDataURL('image/png'));
+                    // Serve the image
+                    serveCanvasImage(canvas);
                 };
 
                 img.onerror = function () {
@@ -77,51 +56,48 @@
                 img.src = `https://i.ytimg.com/vi/${videoId}/${quality}.jpg?t=${Date.now()}`;
             }
 
-            function drawFallback() {
-                // Simple colored fallback based on video ID
-                const hue = videoId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 360;
-                ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
-                ctx.fillRect(0, 0, size, size);
-
-                // Add "YT" text
-                ctx.fillStyle = 'white';
-                ctx.font = `bold ${size / 3}px Arial`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('YT', size / 2, size / 2);
-
-                setFavicon(canvas.toDataURL('image/png'));
-            }
-
-            function setFavicon(dataUrl) {
-                let link = document.querySelector("link[rel='icon']");
-                if (!link) {
-                    link = document.createElement('link');
-                    link.rel = 'icon';
-                    document.head.appendChild(link);
-                }
-                link.href = dataUrl;
-                link.type = 'image/png';
-
-                // Also set for iOS
-                if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                    let appleLink = document.querySelector("link[rel='apple-touch-icon']");
-                    if (!appleLink) {
-                        appleLink = document.createElement('link');
-                        appleLink.rel = 'apple-touch-icon';
-                        document.head.appendChild(appleLink);
-                    }
-                    appleLink.href = dataUrl;
-                }
-            }
-
             tryNextQuality();
+        }
+
+        function generateColor(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const hue = Math.abs(hash % 360);
+            return `hsl(${hue}, 70%, 50%)`;
+        }
+
+        function drawAndServeImage(text, color) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = color;
+            ctx.fillRect(0, 0, 64, 64);
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, 32, 32);
+
+            serveCanvasImage(canvas);
+        }
+
+        function serveCanvasImage(canvas) {
+            // Convert canvas to data URL
+            const dataUrl = canvas.toDataURL('image/png');
+
+            // Redirect to the data URL
+            window.location.href = dataUrl;
         }
     </script>
 </head>
 
 <body>
-    <!-- Empty - everything happens in JavaScript -->
+    <!-- Page will redirect to the actual image data URL -->
+    <p>Generating thumbnail...</p>
 </body>
 
 </html>

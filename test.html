@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Favicon</title>
+    <script>
+        function testFavicon() {
+            const videoId = document.getElementById('videoId').value || 'dQw4w9WgXcQ';
+            
+            // Method 1: Direct set
+            const favicon = document.querySelector("link[rel='icon']") || 
+                           document.createElement('link');
+            favicon.rel = 'icon';
+            favicon.href = `https://igiteam.github.io/img.png/?id=${videoId}`;
+            
+            if (!document.querySelector("link[rel='icon']")) {
+                document.head.appendChild(favicon);
+            }
+            
+            console.log('Favicon set:', favicon.href);
+            
+            // Method 2: Also test as image
+            document.getElementById('testImage').src = `https://igiteam.github.io/img.png/?id=${videoId}`;
+        }
+        
+        // Auto-test on load
+        window.onload = function() {
+            setTimeout(testFavicon, 1000);
+        };
+    </script>
+</head>
+<body>
+    <h1>Test GitHub Pages Favicon</h1>
+    
+    <input type="text" id="videoId" placeholder="Enter YouTube ID" value="dQw4w9WgXcQ">
+    <button onclick="testFavicon()">Test Favicon</button>
+    
+    <h2>Test as Image:</h2>
+    <img id="testImage" style="width: 64px; height: 64px; border: 2px solid #000;">
+    
+    <h2>Test Links:</h2>
+    <ul>
+        <li><a href="https://igiteam.github.io/img.png/?id=dQw4w9WgXcQ" target="_blank">Rick Roll</a></li>
+        <li><a href="https://igiteam.github.io/img.png/?id=9bZkp7q19f0" target="_blank">Gangnam Style</a></li>
+        <li><a href="https://igiteam.github.io/img.png/?id=kJQP7kiw5Fk" target="_blank">Despacito</a></li>
+    </ul>
+    
+    <p>Check your browser tab for favicon change!</p>
+</body>
+</html>
