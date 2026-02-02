@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script>
+        // Get parameters from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoId = urlParams.get('id');
+        const size = parseInt(urlParams.get('size') || '64');
+
+        if (!videoId || !/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+            // Return error image
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ff4444';
+            ctx.fillRect(0, 0, 64, 64);
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('ERR', 32, 32);
+
+            // Set as favicon immediately
+            let link = document.querySelector("link[rel='icon']");
+            if (!link) {
+                link = document.createElement('link');
+                link.rel = 'icon';
+                document.head.appendChild(link);
+            }
+            link.href = canvas.toDataURL('image/png');
+            link.type = 'image/png';
+        } else {
+            // Generate the cropped thumbnail
+            generateCroppedThumbnail(videoId, size);
+        }
+
+        function generateCroppedThumbnail(videoId, size) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            const qualities = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault'];
+            let currentQuality = 0;
+
+            function tryNextQuality() {
+                if (currentQuality >= qualities.length) {
+                    // All failed, use fallback
+                    drawFallback();
+                    return;
+                }
+
+                const quality = qualities[currentQuality];
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+
+                img.onload = function () {
+                    // Crop to square
+                    const sourceSize = Math.min(img.width, img.height);
+                    const sx = (img.width - sourceSize) / 2;
+                    const sy = (img.height - sourceSize) / 2;
+
+                    // Draw cropped and resized
+                    ctx.drawImage(img, sx, sy, sourceSize, sourceSize, 0, 0, size, size);
+
+                    // Set as favicon
+                    setFavicon(canvas.toDataURL('image/png'));
+                };
+
+                img.onerror = function () {
+                    currentQuality++;
+                    tryNextQuality();
+                };
+
+                img.src = `https://i.ytimg.com/vi/${videoId}/${quality}.jpg?t=${Date.now()}`;
+            }
+
+            function drawFallback() {
+                // Simple colored fallback based on video ID
+                const hue = videoId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 360;
+                ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
+                ctx.fillRect(0, 0, size, size);
+
+                // Add "YT" text
+                ctx.fillStyle = 'white';
+                ctx.font = `bold ${size / 3}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('YT', size / 2, size / 2);
+
+                setFavicon(canvas.toDataURL('image/png'));
+            }
+
+            function setFavicon(dataUrl) {
+                let link = document.querySelector("link[rel='icon']");
+                if (!link) {
+                    link = document.createElement('link');
+                    link.rel = 'icon';
+                    document.head.appendChild(link);
+                }
+                link.href = dataUrl;
+                link.type = 'image/png';
+
+                // Also set for iOS
+                if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                    let appleLink = document.querySelector("link[rel='apple-touch-icon']");
+                    if (!appleLink) {
+                        appleLink = document.createElement('link');
+                        appleLink.rel = 'apple-touch-icon';
+                        document.head.appendChild(appleLink);
+                    }
+                    appleLink.href = dataUrl;
+                }
+            }
+
+            tryNextQuality();
+        }
+    </script>
+</head>
+
+<body>
+    <!-- Empty - everything happens in JavaScript -->
+</body>
+
+</html>
